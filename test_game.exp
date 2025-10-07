@@ -1,0 +1,43 @@
+#!/usr/bin/expect -f
+
+# 타임아웃 설정
+set timeout 5
+
+# 프로그램 실행
+spawn ./poker-client
+
+# 메뉴 로딩 대기
+expect "오프라인 게임 시작"
+
+# Down 키 눌러서 오프라인 게임 선택
+send "\033\[B"
+sleep 0.5
+
+# Enter로 게임 시작
+send "\r"
+sleep 1
+
+# 게임 화면 대기
+expect "라운드:"
+
+# 스크린샷 찍기 (화면 출력)
+send_user "\n=== 게임 화면 캡처 ===\n"
+
+# F1으로 도움말 확인
+send "\033OP"
+sleep 1
+expect "도움말"
+
+# ESC로 닫기
+send "\033"
+sleep 0.5
+
+# Ctrl+C로 종료
+send "\003"
+
+# 종료 메시지 확인
+expect "오늘도 편안한 하루 보내세요"
+send_user "\n=== 종료 메시지 확인 완료 ===\n"
+
+# 종료
+expect eof

@@ -1,0 +1,139 @@
+=== RUN   TestGetServerURL_Default
+--- PASS: TestGetServerURL_Default (0.00s)
+=== RUN   TestGetServerURL_FromEnv
+--- PASS: TestGetServerURL_FromEnv (0.00s)
+=== RUN   TestGetServerURL_EnvOverridesDefault
+--- PASS: TestGetServerURL_EnvOverridesDefault (0.00s)
+PASS
+ok  	github.com/bunnyholes/pokerhole/client/cmd/poker-client	0.225s
+=== RUN   TestNewLocalDeck
+--- PASS: TestNewLocalDeck (0.00s)
+=== RUN   TestDrawCard
+--- PASS: TestDrawCard (0.00s)
+=== RUN   TestDrawCardEmptyDeck
+--- PASS: TestDrawCardEmptyDeck (0.00s)
+=== RUN   TestShuffle
+--- PASS: TestShuffle (0.00s)
+=== RUN   TestReset
+--- PASS: TestReset (0.00s)
+PASS
+ok  	github.com/bunnyholes/pokerhole/client/internal/adapter/out/deck	(cached)
+=== RUN   TestDealHoleCards
+--- PASS: TestDealHoleCards (0.00s)
+=== RUN   TestDealHoleCards_MultipleRounds
+--- PASS: TestDealHoleCards_MultipleRounds (0.00s)
+=== RUN   TestDealFlop
+--- PASS: TestDealFlop (0.00s)
+=== RUN   TestDealTurn
+--- PASS: TestDealTurn (0.00s)
+=== RUN   TestDealRiver
+--- PASS: TestDealRiver (0.00s)
+=== RUN   TestCompleteGameDealingSequence
+--- PASS: TestCompleteGameDealingSequence (0.00s)
+=== RUN   TestDealHoleCards_EmptyDeck
+--- PASS: TestDealHoleCards_EmptyDeck (0.00s)
+=== RUN   TestDealFlop_EmptyDeck
+--- PASS: TestDealFlop_EmptyDeck (0.00s)
+=== RUN   TestEvaluateHand
+--- PASS: TestEvaluateHand (0.00s)
+=== RUN   TestNewOfflineGame
+--- PASS: TestNewOfflineGame (0.00s)
+=== RUN   TestOfflineGame_Start
+--- PASS: TestOfflineGame_Start (0.00s)
+=== RUN   TestPlayerAction_Fold
+--- PASS: TestPlayerAction_Fold (0.00s)
+=== RUN   TestPlayerAction_Call
+--- PASS: TestPlayerAction_Call (0.00s)
+=== RUN   TestPlayerAction_Raise
+--- PASS: TestPlayerAction_Raise (0.00s)
+=== RUN   TestPlayerAction_AllIn
+--- PASS: TestPlayerAction_AllIn (0.00s)
+=== RUN   TestPlayerAction_Check
+--- PASS: TestPlayerAction_Check (0.00s)
+=== RUN   TestPlayerAction_InvalidPlayerIndex
+--- PASS: TestPlayerAction_InvalidPlayerIndex (0.00s)
+=== RUN   TestProgressRound_PreFlopToFlop
+--- PASS: TestProgressRound_PreFlopToFlop (0.00s)
+=== RUN   TestProgressRound_FlopToTurn
+--- PASS: TestProgressRound_FlopToTurn (0.00s)
+=== RUN   TestProgressRound_TurnToRiver
+--- PASS: TestProgressRound_TurnToRiver (0.00s)
+=== RUN   TestProgressRound_RiverToShowdown
+--- PASS: TestProgressRound_RiverToShowdown (0.00s)
+=== RUN   TestGetGameState_Snapshot
+--- PASS: TestGetGameState_Snapshot (0.00s)
+=== RUN   TestCompleteGameFlow
+--- PASS: TestCompleteGameFlow (0.00s)
+PASS
+ok  	github.com/bunnyholes/pokerhole/client/internal/core/application/service	(cached)
+?   	github.com/bunnyholes/pokerhole/client/internal/core/domain/card	[no test files]
+?   	github.com/bunnyholes/pokerhole/client/internal/core/domain/game	[no test files]
+?   	github.com/bunnyholes/pokerhole/client/internal/core/domain/game/vo	[no test files]
+=== RUN   TestNewPlayer
+--- PASS: TestNewPlayer (0.00s)
+=== RUN   TestPlaceBet_Success
+--- PASS: TestPlaceBet_Success (0.00s)
+=== RUN   TestPlaceBet_InvalidAmount
+=== RUN   TestPlaceBet_InvalidAmount/Zero_amount
+=== RUN   TestPlaceBet_InvalidAmount/Negative_amount
+--- PASS: TestPlaceBet_InvalidAmount (0.00s)
+    --- PASS: TestPlaceBet_InvalidAmount/Zero_amount (0.00s)
+    --- PASS: TestPlaceBet_InvalidAmount/Negative_amount (0.00s)
+=== RUN   TestPlaceBet_InsufficientChips
+--- PASS: TestPlaceBet_InsufficientChips (0.00s)
+=== RUN   TestPlaceBet_Multiple
+--- PASS: TestPlaceBet_Multiple (0.00s)
+=== RUN   TestFold
+--- PASS: TestFold (0.00s)
+=== RUN   TestAllIn
+--- PASS: TestAllIn (0.00s)
+=== RUN   TestAllIn_AfterBetting
+--- PASS: TestAllIn_AfterBetting (0.00s)
+=== RUN   TestResetBet
+--- PASS: TestResetBet (0.00s)
+=== RUN   TestAddChips
+--- PASS: TestAddChips (0.00s)
+=== RUN   TestSetHand
+--- PASS: TestSetHand (0.00s)
+=== RUN   TestSetPosition
+--- PASS: TestSetPosition (0.00s)
+=== RUN   TestSetStatus
+--- PASS: TestSetStatus (0.00s)
+=== RUN   TestPlayerString
+--- PASS: TestPlayerString (0.00s)
+=== RUN   TestBettingRoundScenario
+--- PASS: TestBettingRoundScenario (0.00s)
+PASS
+ok  	github.com/bunnyholes/pokerhole/client/internal/core/domain/player	(cached)
+?   	github.com/bunnyholes/pokerhole/client/internal/identity	[no test files]
+?   	github.com/bunnyholes/pokerhole/client/internal/logger	[no test files]
+=== RUN   TestConnectWithTimeout_Success
+    client_test.go:38: Read error (expected during test cleanup): websocket: close 1006 (abnormal closure): unexpected EOF
+--- PASS: TestConnectWithTimeout_Success (0.00s)
+=== RUN   TestConnectWithTimeout_Timeout
+--- PASS: TestConnectWithTimeout_Timeout (0.10s)
+=== RUN   TestConnectWithTimeout_InvalidURL
+--- PASS: TestConnectWithTimeout_InvalidURL (0.00s)
+PASS
+ok  	github.com/bunnyholes/pokerhole/client/internal/network	0.773s
+?   	github.com/bunnyholes/pokerhole/client/internal/state	[no test files]
+=== RUN   TestNewModel_OnlineMode
+--- PASS: TestNewModel_OnlineMode (0.00s)
+=== RUN   TestNewModel_OfflineMode
+--- PASS: TestNewModel_OfflineMode (0.00s)
+=== RUN   TestSwitchToOfflineMode
+--- PASS: TestSwitchToOfflineMode (0.00s)
+=== RUN   TestConnectionEstablished
+--- PASS: TestConnectionEstablished (0.00s)
+=== RUN   TestRenderSplash_OnlineMode
+--- PASS: TestRenderSplash_OnlineMode (0.00s)
+=== RUN   TestRenderSplash_OfflineMode
+--- PASS: TestRenderSplash_OfflineMode (0.00s)
+=== RUN   TestRenderOfflineMenu
+--- PASS: TestRenderOfflineMenu (0.00s)
+=== RUN   TestQuitKey
+--- PASS: TestQuitKey (0.00s)
+=== RUN   TestQuitMenuSelection
+--- PASS: TestQuitMenuSelection (0.00s)
+PASS
+ok  	github.com/bunnyholes/pokerhole/client/internal/ui	0.884s

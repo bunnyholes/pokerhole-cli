@@ -1,9 +1,9 @@
 package network
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -16,33 +16,36 @@ type ServerMessageType string
 
 const (
 	// Client -> Server
-	ClientRegister      ClientMessageType = "REGISTER"
-	ClientHeartbeat     ClientMessageType = "HEARTBEAT"
-	ClientJoinRandom    ClientMessageType = "JOIN_RANDOM_MATCH"
-	ClientJoinCode      ClientMessageType = "JOIN_CODE_MATCH"
-	ClientCancelMatch   ClientMessageType = "CANCEL_MATCHING"
-	ClientCall          ClientMessageType = "CALL"
-	ClientRaise         ClientMessageType = "RAISE"
-	ClientFold          ClientMessageType = "FOLD"
-	ClientCheck         ClientMessageType = "CHECK"
-	ClientAllIn         ClientMessageType = "ALL_IN"
-	ClientLeaveGame     ClientMessageType = "LEAVE_GAME"
-	ClientChatMessage   ClientMessageType = "CHAT_MESSAGE"
+	ClientRegister    ClientMessageType = "REGISTER"
+	ClientHeartbeat   ClientMessageType = "HEARTBEAT"
+	ClientJoinRandom  ClientMessageType = "JOIN_RANDOM_MATCH"
+	ClientJoinCode    ClientMessageType = "JOIN_CODE_MATCH"
+	ClientCancelMatch ClientMessageType = "CANCEL_MATCHING"
+	ClientCall        ClientMessageType = "CALL"
+	ClientRaise       ClientMessageType = "RAISE"
+	ClientFold        ClientMessageType = "FOLD"
+	ClientCheck       ClientMessageType = "CHECK"
+	ClientAllIn       ClientMessageType = "ALL_IN"
+	ClientLeaveGame   ClientMessageType = "LEAVE_GAME"
+	ClientChatMessage ClientMessageType = "CHAT_MESSAGE"
 
 	// Server -> Client
-	ServerRegisterSuccess ServerMessageType = "REGISTER_SUCCESS"
-	ServerRegisterFailure ServerMessageType = "REGISTER_FAILURE"
-	ServerMatchingStarted ServerMessageType = "MATCHING_STARTED"
-	ServerMatchingProgress ServerMessageType = "MATCHING_PROGRESS"
+	ServerRegisterSuccess   ServerMessageType = "REGISTER_SUCCESS"
+	ServerRegisterFailure   ServerMessageType = "REGISTER_FAILURE"
+	ServerMatchingStarted   ServerMessageType = "MATCHING_STARTED"
+	ServerMatchingProgress  ServerMessageType = "MATCHING_PROGRESS"
 	ServerMatchingCompleted ServerMessageType = "MATCHING_COMPLETED"
 	ServerMatchingCancelled ServerMessageType = "MATCHING_CANCELLED"
-	ServerGameStarted      ServerMessageType = "GAME_STARTED"
-	ServerGameStateUpdate  ServerMessageType = "GAME_STATE_UPDATE"
-	ServerPlayerAction     ServerMessageType = "PLAYER_ACTION"
-	ServerRoundCompleted   ServerMessageType = "ROUND_COMPLETED"
-	ServerGameEnded        ServerMessageType = "GAME_ENDED"
-	ServerError            ServerMessageType = "ERROR"
-	ServerInvalidAction    ServerMessageType = "INVALID_ACTION"
+	ServerGameStarted       ServerMessageType = "GAME_STARTED"
+	ServerGameStateUpdate   ServerMessageType = "GAME_STATE_UPDATE"
+	ServerPlayerAction      ServerMessageType = "PLAYER_ACTION"
+	ServerTurnChanged       ServerMessageType = "TURN_CHANGED"     // ADDED: Turn changed notification
+	ServerRoundProgressed   ServerMessageType = "ROUND_PROGRESSED" // ADDED: Round progression (FLOP/TURN/RIVER)
+	ServerRoundCompleted    ServerMessageType = "ROUND_COMPLETED"
+	ServerGameEnded         ServerMessageType = "GAME_ENDED"
+	ServerChatMessage       ServerMessageType = "CHAT_MESSAGE" // ADDED: Chat message
+	ServerError             ServerMessageType = "ERROR"
+	ServerInvalidAction     ServerMessageType = "INVALID_ACTION"
 )
 
 // ClientMessage represents a message from client to server
@@ -61,15 +64,15 @@ type ServerMessage struct {
 
 // Client represents a WebSocket client
 type Client struct {
-	conn       *websocket.Conn
-	serverURL  string
-	uuid       string
-	nickname   string
-	inbound    chan ServerMessage
-	outbound   chan ClientMessage
-	done       chan struct{}
-	connected  bool
-	mu         sync.RWMutex
+	conn      *websocket.Conn
+	serverURL string
+	uuid      string
+	nickname  string
+	inbound   chan ServerMessage
+	outbound  chan ClientMessage
+	done      chan struct{}
+	connected bool
+	mu        sync.RWMutex
 }
 
 // NewClient creates a new WebSocket client
@@ -89,6 +92,43 @@ func (c *Client) Connect() error {
 	conn, _, err := websocket.DefaultDialer.Dial(c.serverURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
+	}
+
+	c.mu.Lock()
+	c.conn = conn
+	c.connected = true
+	c.mu.Unlock()
+
+	// Start read/write goroutines
+	go c.readPump()
+	go c.writePump()
+
+	// Send REGISTER message
+	return c.Send(ClientMessage{
+		Type:      ClientRegister,
+		Timestamp: time.Now().UnixMilli(),
+		Payload: map[string]interface{}{
+			"uuid":     c.uuid,
+			"nickname": c.nickname,
+		},
+	})
+}
+
+// ConnectWithTimeout establishes WebSocket connection with timeout
+func (c *Client) ConnectWithTimeout(timeout time.Duration) error {
+	// Create dialer with handshake timeout
+	dialer := websocket.Dialer{
+		HandshakeTimeout: timeout,
+	}
+
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	// Dial with context
+	conn, _, err := dialer.DialContext(ctx, c.serverURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to connect within %v: %w", timeout, err)
 	}
 
 	c.mu.Lock()
@@ -146,7 +186,8 @@ func (c *Client) Close() error {
 	close(c.done)
 
 	if c.conn != nil {
-		return c.conn.Close()
+		err := c.conn.Close()
+		return err
 	}
 
 	return nil
@@ -157,6 +198,15 @@ func (c *Client) IsConnected() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.connected
+}
+
+// JoinRandomMatch sends a request to join random match
+func (c *Client) JoinRandomMatch() error {
+	return c.Send(ClientMessage{
+		Type:      ClientJoinRandom,
+		Timestamp: time.Now().UnixMilli(),
+		Payload:   map[string]interface{}{},
+	})
 }
 
 // readPump reads messages from the WebSocket
@@ -170,15 +220,11 @@ func (c *Client) readPump() {
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("WebSocket read error: %v", err)
-			}
 			return
 		}
 
 		var serverMsg ServerMessage
 		if err := json.Unmarshal(message, &serverMsg); err != nil {
-			log.Printf("Failed to unmarshal message: %v", err)
 			continue
 		}
 
@@ -200,12 +246,9 @@ func (c *Client) writePump() {
 		case msg := <-c.outbound:
 			data, err := json.Marshal(msg)
 			if err != nil {
-				log.Printf("Failed to marshal message: %v", err)
 				continue
 			}
-
 			if err := c.conn.WriteMessage(websocket.TextMessage, data); err != nil {
-				log.Printf("Failed to write message: %v", err)
 				return
 			}
 
@@ -224,4 +267,43 @@ func (c *Client) writePump() {
 			return
 		}
 	}
+}
+
+// SendGameAction sends a game action (FOLD, CHECK, CALL, RAISE, ALL_IN)
+func (c *Client) SendGameAction(action ClientMessageType, amount int) error {
+	payload := map[string]interface{}{}
+	if action == ClientRaise && amount > 0 {
+		payload["amount"] = amount
+	}
+
+	return c.Send(ClientMessage{
+		Type:      action,
+		Timestamp: time.Now().UnixMilli(),
+		Payload:   payload,
+	})
+}
+
+// Fold sends FOLD action
+func (c *Client) Fold() error {
+	return c.SendGameAction(ClientFold, 0)
+}
+
+// Check sends CHECK action
+func (c *Client) Check() error {
+	return c.SendGameAction(ClientCheck, 0)
+}
+
+// Call sends CALL action
+func (c *Client) Call() error {
+	return c.SendGameAction(ClientCall, 0)
+}
+
+// Raise sends RAISE action with amount
+func (c *Client) Raise(amount int) error {
+	return c.SendGameAction(ClientRaise, amount)
+}
+
+// AllIn sends ALL_IN action
+func (c *Client) AllIn() error {
+	return c.SendGameAction(ClientAllIn, 0)
 }

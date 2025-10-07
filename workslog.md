@@ -3285,3 +3285,131 @@ The issue wasn't with the game logic or round progression rules. The logic was c
    return updated, cmd  // Use the updated Model!
    ```
 
+
+## 2025-10-07 02:11 - Intro Scene Component-Based Architecture Refactoring
+
+### Summary
+Complete refactoring of the intro scene with hierarchical Model-Update-View pattern, independent sub-components, and comprehensive golden test coverage (40 test files).
+
+### Architecture Changes
+
+**Component-Based Structure:**
+- Hierarchical M-U-V pattern at scene and component levels
+- Scene orchestrates independent sub-components (title, subtitle, prompt)
+- Each component has its own Model, Update, View implementation
+- Resolved circular dependency with new `internal/ui/constants/` package
+
+**Directory Structure:**
+```
+internal/ui/
+├── constants/
+│   ├── terminal.go (TerminalWidth=80, TerminalHeight=28)
+│   └── colors.go (Centralized color definitions)
+└── scenes/intro/
+    ├── model.go, update.go, view.go (Scene orchestration)
+    ├── bindings.go, golden_test.go
+    └── components/
+        ├── title/ (M-U-V + tests, 20 golden files)
+        ├── subtitle/ (M-U-V + tests, 5 golden files)
+        └── prompt/ (M-U-V + tests, 3 golden files)
+```
+
+### Component Details
+
+**Title Component:**
+- Dynamic ASCII art using `go-figure` library (standard font)
+- Replaced 300+ lines of hardcoded letters
+- Supports any word/phrase dynamically
+- Left-aligned layout with typing animation
+
+**Subtitle Component:**
+- Opacity-based fade-in animation (0.0 → 1.0)
+- 4 visual states: ColorTextSecondary → ColorVintageGoldDim → ColorVintageGold → ColorVintageGold+Bold
+- Center-aligned layout
+
+**Prompt Component:**
+- Stateless component with center-aligned text
+- ColorTextSecondary styling
+- Supports Korean, English, and other character sets
+
+### Golden Test Coverage
+
+**Total: 40 golden test files**
+
+**Component-Level Tests:**
+- Title: 20 tests (typing progression, different words, different widths)
+- Subtitle: 5 tests (opacity 0.0, 0.2, 0.5, 0.8, 1.0)
+- Prompt: 3 tests (Korean, English, empty)
+
+**Scene-Level Tests (12 tests):**
+- Phase progression: PhaseTyping → PhaseSubtitle → PhaseHold → PhaseDone (4)
+- Title progression in scene: empty, POK, POKERH, POKERHOLE (4)
+- Subtitle opacity in scene: 0.0, 0.3, 0.7, 1.0 (4)
+
+**Test Configuration:**
+- TrueColor forced via `lipgloss.SetColorProfile(termenv.TrueColor)`
+- Deterministic RGB values in golden snapshots
+- Consistent ANSI escape codes across all environments
+
+### Visual Changes
+
+**Shell Style:**
+- Removed `DoubleBorder()` from `shellStyle` in `app_styles.go`
+- Borderless layout throughout application
+- Maintained `Padding(1,2)` for appropriate margins
+
+**Layout:**
+- 28x80 terminal with `lipgloss.Place` vertical centering
+- Title: Left-aligned ASCII art
+- Subtitle: Center-aligned with opacity animation
+- Prompt: Center-aligned instruction text
+
+### Dependencies
+- Added: `github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be`
+- Purpose: Dynamic ASCII art generation
+
+### Files Modified
+- `go.mod`, `go.sum`: Added go-figure dependency
+- `internal/ui/app_styles.go`: Removed border from shellStyle
+- `internal/ui/model.go`: Integrated intro.Model instead of intro.State
+- `internal/ui/layout.go`: Updated applyShell for new structure
+- `internal/ui/intro.go`: Simplified to delegate to intro scene
+
+### Files Created
+- `internal/ui/constants/terminal.go`: Terminal size constants
+- `internal/ui/constants/colors.go`: Color constants (resolved circular deps)
+- `internal/ui/scenes/intro/model.go`: Scene orchestration model
+- `internal/ui/scenes/intro/update.go`: Scene message handling
+- `internal/ui/scenes/intro/view.go`: Scene composition with lipgloss.Place
+- `internal/ui/scenes/intro/bindings.go`: Key bindings
+- `internal/ui/scenes/intro/golden_test.go`: Scene-level golden tests (12)
+- `components/title/`: model.go, update.go, view.go, golden_test.go, model_test.go, view_test.go
+- `components/subtitle/`: model.go, update.go, view.go, golden_test.go
+- `components/prompt/`: model.go, update.go, view.go, golden_test.go
+- 40 `.golden` snapshot files across all components and scene
+
+### Files Deleted
+- Old test files: `model_test.go`, `color_test.go`, `view_test.go`
+- Stale golden files from previous test runs
+
+### Technical Improvements
+- Resolved circular dependency (ui ↔ intro)
+- Tests co-located with code (Go convention)
+- Each component fully independent and reusable
+- Golden tests provide regression protection
+- All 40+ tests passing
+
+### Test Results
+```
+✓ All golden tests passing (40 files)
+✓ Component isolation tests passing
+✓ Scene composition tests passing
+✓ TrueColor ANSI codes verified
+```
+
+### Commit
+- Hash: `7dd8e8e1a0788cddcda984570a52bfabcc90acda`
+- Message: "refactor: Restructure intro scene with component-based architecture and comprehensive golden tests"
+
+---
+

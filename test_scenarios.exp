@@ -1,0 +1,148 @@
+#!/usr/bin/expect -f
+# 포커 게임 자동 테스트 시나리오
+
+set timeout 10
+
+# 시나리오 선택
+if {$argc == 0} {
+    puts "사용법: ./test_scenarios.exp <scenario_number>"
+    puts "시나리오:"
+    puts "  1: 올인 테스트 (버그 확인)"
+    puts "  2: 정상 플레이 (Call/Raise)"
+    puts "  3: 폴드 테스트"
+    puts "  4: 10판 연속 플레이"
+    exit 1
+}
+
+set scenario [lindex $argv 0]
+
+spawn ./poker-client
+
+# 메뉴 로딩 대기
+expect "게임 시작"
+sleep 0.5
+
+# 게임 시작
+send "\r"
+expect "라운드:"
+sleep 1
+
+switch $scenario {
+    1 {
+        # 시나리오 1: 올인 테스트
+        puts "\n=== 시나리오 1: 올인 테스트 ==="
+
+        # 매 라운드마다 올인
+        for {set i 0} {$i < 5} {incr i} {
+            send "a"
+            sleep 1.5
+
+            # SHOWDOWN까지 대기
+            expect {
+                "SHOWDOWN" {
+                    puts "\n>>> 쇼다운 도달 - 결과 확인"
+                    sleep 2
+                    send "n"
+                    sleep 1
+                }
+                timeout {
+                    puts "\n>>> 타임아웃 - 게임 진행 중"
+                }
+            }
+        }
+    }
+
+    2 {
+        # 시나리오 2: 정상 플레이
+        puts "\n=== 시나리오 2: 정상 플레이 ==="
+
+        for {set round 0} {$round < 3} {incr round} {
+            # Pre-flop: Call
+            send "c"
+            sleep 1
+
+            # Flop: Check or Call
+            expect "라운드: FLOP"
+            send "k"
+            sleep 1
+
+            # Turn: Call
+            expect "라운드: TURN"
+            send "c"
+            sleep 1
+
+            # River: Call
+            expect "라운드: RIVER"
+            send "c"
+            sleep 1
+
+            # Showdown
+            expect "SHOWDOWN"
+            sleep 2
+            send "n"
+            sleep 1
+        }
+    }
+
+    3 {
+        # 시나리오 3: 폴드 테스트
+        puts "\n=== 시나리오 3: 폴드 테스트 ==="
+
+        for {set i 0} {$i < 5} {incr i} {
+            send "f"
+            sleep 1.5
+
+            expect "SHOWDOWN"
+            sleep 1
+            send "n"
+            sleep 1
+        }
+    }
+
+    4 {
+        # 시나리오 4: 10판 연속
+        puts "\n=== 시나리오 4: 10판 연속 플레이 ==="
+
+        for {set game 0} {$game < 10} {incr game} {
+            puts "\n>>> 게임 $game/10"
+
+            # 랜덤 액션
+            set action [expr {int(rand() * 3)}]
+
+            switch $action {
+                0 { send "c" }
+                1 { send "r" }
+                2 { send "a" }
+            }
+
+            sleep 2
+
+            expect {
+                "SHOWDOWN" {
+                    sleep 1
+                    send "n"
+                    sleep 1
+                }
+                "게임 종료" {
+                    puts "\n>>> 게임 종료 (칩 소진)"
+                    break
+                }
+                timeout {
+                    send "n"
+                    sleep 1
+                }
+            }
+        }
+    }
+
+    default {
+        puts "잘못된 시나리오 번호"
+        exit 1
+    }
+}
+
+# 종료
+puts "\n=== 테스트 완료 ==="
+sleep 1
+send "\x03"
+expect eof
