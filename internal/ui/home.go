@@ -180,9 +180,39 @@ func (m Model) viewHome() string {
 		}
 	}
 
-	left := m.renderMenuColumn(leftWidth)
-	right := m.renderMenuDetail(rightWidth)
-	spacer := lipgloss.NewStyle().Width(gap).Render("")
+	// Render both panels first to get their heights
+	leftPanel := m.renderMenuColumn(leftWidth)
+	rightPanel := m.renderMenuDetail(rightWidth)
+
+	// Calculate the maximum height needed
+	leftHeight := lipgloss.Height(leftPanel)
+	rightHeight := lipgloss.Height(rightPanel)
+	maxHeight := leftHeight
+	if rightHeight > maxHeight {
+		maxHeight = rightHeight
+	}
+
+	// Re-render with fixed height
+	left := m.renderMenuColumnWithHeight(leftWidth, maxHeight)
+	right := m.renderMenuDetailWithHeight(rightWidth, maxHeight)
+
+	// Get the actual rendered heights
+	actualLeftHeight := lipgloss.Height(left)
+	actualRightHeight := lipgloss.Height(right)
+	actualMaxHeight := actualLeftHeight
+	if actualRightHeight > actualMaxHeight {
+		actualMaxHeight = actualRightHeight
+	}
+
+	// Create proper spacer matching the actual rendered height
+	var spacerLines []string
+	for i := 0; i < actualMaxHeight; i++ {
+		spacerLines = append(spacerLines, strings.Repeat(" ", gap))
+	}
+	spacer := strings.Join(spacerLines, "\n")
+
+	// Add "게임 모드" label above the left panel
+	label := homeSectionLabelStyle.Copy().Width(leftWidth).Render("게임 모드")
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, left, spacer, right)
 
@@ -190,6 +220,7 @@ func (m Model) viewHome() string {
 		title,
 		status,
 		"",
+		label,
 		body,
 	)
 
@@ -254,11 +285,15 @@ func (m Model) renderPlayerSummary() string {
 }
 
 func (m Model) renderMenuColumn(width int) string {
+	return m.renderMenuColumnWithHeight(width, 0)
+}
+
+func (m Model) renderMenuColumnWithHeight(width int, minHeight int) string {
 	if width < 28 {
 		width = 28
 	}
 
-	frameWidth, _ := panelStyle.GetFrameSize()
+	frameWidth, frameHeight := panelStyle.GetFrameSize()
 	innerWidth := width - frameWidth
 	if innerWidth < 1 {
 		innerWidth = width
@@ -290,29 +325,40 @@ func (m Model) renderMenuColumn(width int) string {
 
 	content := lipgloss.JoinVertical(lipgloss.Left, rows...)
 
-	return lipgloss.JoinVertical(
-		lipgloss.Left,
-		homeSectionLabelStyle.Copy().Width(width).Render("게임 모드"),
-		panelStyle.Copy().Width(width).Render(content),
-	)
+	// Apply minHeight by padding the content if needed
+	if minHeight > 0 {
+		innerHeight := minHeight - frameHeight
+		currentHeight := lipgloss.Height(content)
+		if currentHeight < innerHeight {
+			// Add empty lines to reach desired height
+			for i := currentHeight; i < innerHeight; i++ {
+				content += "\n" + lipgloss.NewStyle().Width(innerWidth).Render("")
+			}
+		}
+	}
+
+	// Return just the panel without the label
+	return panelStyle.Copy().Width(width).Render(content)
 }
 
 func (m Model) renderMenuDetail(width int) string {
+	return m.renderMenuDetailWithHeight(width, 0)
+}
+
+func (m Model) renderMenuDetailWithHeight(width int, minHeight int) string {
 	if width < 28 {
 		width = 28
 	}
 
-	frameWidth, _ := homeDetailPanelStyle.GetFrameSize()
+	frameWidth, frameHeight := homeDetailPanelStyle.GetFrameSize()
 	innerWidth := width - frameWidth
 	if innerWidth < 1 {
 		innerWidth = width
 	}
 
-	panel := homeDetailPanelStyle.Copy().Width(width)
-
 	if len(m.home.items) == 0 {
 		empty := homeDetailBodyStyle.Copy().Width(innerWidth).Render("선택 가능한 메뉴가 없습니다.")
-		return panel.Render(empty)
+		return homeDetailPanelStyle.Copy().Width(width).Render(empty)
 	}
 
 	selected := m.home.items[m.home.selected]
@@ -340,5 +386,17 @@ func (m Model) renderMenuDetail(width int) string {
 
 	content := lipgloss.JoinVertical(lipgloss.Left, sections...)
 
-	return panel.Render(content)
+	// Apply minHeight by padding the content if needed
+	if minHeight > 0 {
+		innerHeight := minHeight - frameHeight
+		currentHeight := lipgloss.Height(content)
+		if currentHeight < innerHeight {
+			// Add empty lines to reach desired height
+			for i := currentHeight; i < innerHeight; i++ {
+				content += "\n" + lipgloss.NewStyle().Width(innerWidth).Render("")
+			}
+		}
+	}
+
+	return homeDetailPanelStyle.Copy().Width(width).Render(content)
 }
