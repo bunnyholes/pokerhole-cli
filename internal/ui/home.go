@@ -192,36 +192,58 @@ func (m Model) viewHome() string {
 		maxHeight = rightHeight
 	}
 
-	// Re-render with fixed height
-	left := m.renderMenuColumnWithHeight(leftWidth, maxHeight)
-	right := m.renderMenuDetailWithHeight(rightWidth, maxHeight)
+	// Split panels into lines for manual joining
+	leftLines := strings.Split(leftPanel, "\n")
+	rightLines := strings.Split(rightPanel, "\n")
 
-	// Get the actual rendered heights
-	actualLeftHeight := lipgloss.Height(left)
-	actualRightHeight := lipgloss.Height(right)
-	actualMaxHeight := actualLeftHeight
-	if actualRightHeight > actualMaxHeight {
-		actualMaxHeight = actualRightHeight
+	// Pad to same height
+	for len(leftLines) < maxHeight {
+		leftLines = append(leftLines, strings.Repeat(" ", leftWidth))
+	}
+	for len(rightLines) < maxHeight {
+		rightLines = append(rightLines, strings.Repeat(" ", rightWidth))
 	}
 
-	// Create proper spacer matching the actual rendered height
-	var spacerLines []string
-	for i := 0; i < actualMaxHeight; i++ {
-		spacerLines = append(spacerLines, strings.Repeat(" ", gap))
+	// Truncate if over maxHeight
+	if len(leftLines) > maxHeight {
+		leftLines = leftLines[:maxHeight]
 	}
-	spacer := strings.Join(spacerLines, "\n")
+	if len(rightLines) > maxHeight {
+		rightLines = rightLines[:maxHeight]
+	}
 
-	// Add "게임 모드" label above the left panel
+	// Join each line horizontally (no truncation - only padding if needed)
+	var panelLines []string
+	spacerStr := strings.Repeat(" ", gap)
+	for i := 0; i < maxHeight; i++ {
+		leftLine := leftLines[i]
+		rightLine := rightLines[i]
+
+		// Only pad if line is shorter (don't truncate to avoid breaking ANSI codes)
+		leftLineWidth := lipgloss.Width(leftLine)
+		if leftLineWidth < leftWidth {
+			leftLine += strings.Repeat(" ", leftWidth-leftLineWidth)
+		}
+
+		rightLineWidth := lipgloss.Width(rightLine)
+		if rightLineWidth < rightWidth {
+			rightLine += strings.Repeat(" ", rightWidth-rightLineWidth)
+		}
+
+		panelLines = append(panelLines, leftLine+spacerStr+rightLine)
+	}
+	panelsRow := strings.Join(panelLines, "\n")
+
+	// Add label above
 	label := homeSectionLabelStyle.Copy().Width(leftWidth).Render("게임 모드")
-
-	body := lipgloss.JoinHorizontal(lipgloss.Top, left, spacer, right)
+	labelRow := label
 
 	layout := lipgloss.JoinVertical(lipgloss.Left,
 		title,
 		status,
 		"",
-		label,
-		body,
+		labelRow,
+		panelsRow,
 	)
 
 	return m.applyShell(layout)
@@ -285,15 +307,11 @@ func (m Model) renderPlayerSummary() string {
 }
 
 func (m Model) renderMenuColumn(width int) string {
-	return m.renderMenuColumnWithHeight(width, 0)
-}
-
-func (m Model) renderMenuColumnWithHeight(width int, minHeight int) string {
 	if width < 28 {
 		width = 28
 	}
 
-	frameWidth, frameHeight := panelStyle.GetFrameSize()
+	frameWidth, _ := panelStyle.GetFrameSize()
 	innerWidth := width - frameWidth
 	if innerWidth < 1 {
 		innerWidth = width
@@ -325,32 +343,16 @@ func (m Model) renderMenuColumnWithHeight(width int, minHeight int) string {
 
 	content := lipgloss.JoinVertical(lipgloss.Left, rows...)
 
-	// Apply minHeight by padding the content if needed
-	if minHeight > 0 {
-		innerHeight := minHeight - frameHeight
-		currentHeight := lipgloss.Height(content)
-		if currentHeight < innerHeight {
-			// Add empty lines to reach desired height
-			for i := currentHeight; i < innerHeight; i++ {
-				content += "\n" + lipgloss.NewStyle().Width(innerWidth).Render("")
-			}
-		}
-	}
-
-	// Return just the panel without the label
-	return panelStyle.Copy().Width(width).Render(content)
+	// Return the panel (don't specify Width on panel - it's already sized by content)
+	return panelStyle.Render(content)
 }
 
 func (m Model) renderMenuDetail(width int) string {
-	return m.renderMenuDetailWithHeight(width, 0)
-}
-
-func (m Model) renderMenuDetailWithHeight(width int, minHeight int) string {
 	if width < 28 {
 		width = 28
 	}
 
-	frameWidth, frameHeight := homeDetailPanelStyle.GetFrameSize()
+	frameWidth, _ := homeDetailPanelStyle.GetFrameSize()
 	innerWidth := width - frameWidth
 	if innerWidth < 1 {
 		innerWidth = width
@@ -386,17 +388,6 @@ func (m Model) renderMenuDetailWithHeight(width int, minHeight int) string {
 
 	content := lipgloss.JoinVertical(lipgloss.Left, sections...)
 
-	// Apply minHeight by padding the content if needed
-	if minHeight > 0 {
-		innerHeight := minHeight - frameHeight
-		currentHeight := lipgloss.Height(content)
-		if currentHeight < innerHeight {
-			// Add empty lines to reach desired height
-			for i := currentHeight; i < innerHeight; i++ {
-				content += "\n" + lipgloss.NewStyle().Width(innerWidth).Render("")
-			}
-		}
-	}
-
-	return homeDetailPanelStyle.Copy().Width(width).Render(content)
+	// Return the panel (don't specify Width on panel - it's already sized by content)
+	return homeDetailPanelStyle.Render(content)
 }
