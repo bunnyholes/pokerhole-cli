@@ -109,6 +109,8 @@ func NewModel(client *network.Client, online bool, playerName string) Model {
 		spinner:    sp,
 		screen:     screenIntro,
 		modal:      modalNone,
+		width:      80, // Initialize with default terminal width
+		height:     28, // Initialize with default terminal height
 		introModel: intro.NewModel(80), // Updated: Initialize with intro.NewModel
 	}
 
